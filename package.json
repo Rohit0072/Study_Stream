@@ -1,0 +1,115 @@
+{
+  "name": "studystream",
+  "version": "1.0.0",
+  "description": "A video learning assistant for your courses",
+  "main": "dist/electron/main.js",
+  "homepage": "./",
+  "author": {
+    "name": "rohit singh",
+    "email": "jhoh3020@gmail.com"
+  },
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "tsc -p electron/tsconfig.json && wait-on timeout:3000 && electron .",
+    "build": "npm run build:vite && npm run build:electron",
+    "build:vite": "vite build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "package": "npm run build && electron-builder build --publish never",
+    "package:win": "npm run build && electron-builder build --win --publish never",
+    "package:linux": "npm run build && electron-builder build --linux --publish never",
+    "package:mac": "npm run build && electron-builder build --mac --publish never"
+  },
+  "build": {
+    "appId": "com.studystream.app",
+    "productName": "StudyStream",
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "public/**/*",
+      "icons/**/*"
+    ],
+    "directories": {
+      "output": "release",
+      "buildResources": "resources"
+    },
+    "extraResources": [
+      {
+        "from": "public/icons",
+        "to": "icons"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "public/icons/icon.png",
+      "desktop": {
+        "Name": "StudyStream",
+        "Comment": "A video learning assistant for your courses",
+        "Keywords": "electron;react;video;learning;education;"
+      }
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "public/icons/icon.ico"
+    },
+    "mac": {
+      "category": "public.app-category.education",
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icons/icon.icns"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "electron-updater": "^6.1.7",
+    "framer-motion": "^10.18.0",
+    "fs": "0.0.1-security",
+    "lucide-react": "^0.292.0",
+    "next": "16.0.0",
+    "path": "0.12.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^6.18.0",
+    "remark-gfm": "^4.0.1",
+    "shadcn": "3.4.2",
+    "tailwind-merge": "3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@vitejs/plugin-react": "^4.1.1",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "electron": "27.0.4",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.6",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "wait-on": "^7.2.0"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "video",
+    "learning",
+    "education"
+  ],
+  "license": "MIT"
+}
