@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Palette, Tag, Save } from "lucide-react"
-import { useApp } from "../context/app-context"
+import { useApp } from "../../context/app-context"
 
 interface CourseCustomizationModalProps {
   isOpen: boolean

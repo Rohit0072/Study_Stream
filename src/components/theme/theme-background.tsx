@@ -2,7 +2,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { useTheme } from "../context/theme-context"
+import { useTheme } from "../../context/theme-context"
 
 export function ThemeBackground() {
   const { theme, activeCustomTheme } = useTheme()

@@ -23,6 +23,8 @@ electron_1.contextBridge.exposeInMainWorld("electron", {
     openExternal: (filePath) => electron_1.ipcRenderer.invoke("open-external", filePath),
     // Add method to get file stats
     getFileStats: (filePath) => electron_1.ipcRenderer.invoke("get-file-stats", filePath),
+    // Add method to show notification
+    showNotification: (title, body) => electron_1.ipcRenderer.invoke("show-notification", title, body),
     // Add methods for handling progress updates
     onCourseLoadingProgress: (callback) => {
         const channel = "course-loading-progress";

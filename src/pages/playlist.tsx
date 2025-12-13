@@ -6,8 +6,8 @@ import { useNavigate, useParams } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { ArrowLeft, Bookmark, Download, FileText, Maximize2, Minimize2, Pause, Play, X, Volume2, VolumeX, Brain } from "lucide-react"
 import { useApp } from "../context/app-context"
-import { VideoPlayer } from "../components/video-player"
-import { VideoPlaylistItem } from "../components/video-playlist-item"
+import { VideoPlayer } from "../components/video/video-player"
+import { VideoPlaylistItem } from "../components/video/video-playlist-item"
 import { NotesPanel } from "../components/notes-panel"
 import { AIChallenge } from "../components/ai-challenge"
 import { BookmarkModal } from "../components/bookmark-modal"
@@ -1010,6 +1010,7 @@ function PlaylistPage() {
                       onBookmark={handleBookmark}
                       onNextVideo={handleNextVideo}
                       onPreviousVideo={handlePreviousVideo}
+                      onVideoEnd={handleNextVideo}
                       autoPlayNext={userProfile.autoPlayNext || false}
                       resetPosition={resetVideoPosition}
                       videoKey={videoKey}

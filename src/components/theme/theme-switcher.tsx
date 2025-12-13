@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Palette, Check, Plus, Settings, Download, Upload, Trash2 } from "lucide-react"
-import { useTheme } from "../context/theme-context"
+import { useTheme } from "../../context/theme-context"
 import { ThemeCustomizationModal } from "./theme-customization-modal"
 
 type Theme = "default" | "wood" | "glass" | "metal" | "custom"
