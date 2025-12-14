@@ -25,6 +25,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined)
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const isElectron = typeof window !== "undefined" && window.electron !== undefined
   const platform = isElectron && window.electron ? window.electron.platform : "web"
+  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({})
+
   useEffect(() => {
     if (isElectron) {
       const savedProgress = localStorage.getItem("videoProgress")
@@ -33,7 +35,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     }
   }, [isElectron])
-  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({})
 
   const saveVideoProgress = (courseName: string, videoName: string, progress: number) => {
     const key = `${courseName}/${videoName}`
