@@ -2,7 +2,7 @@
 "use client"
 
 import { React } from "react"
-import { useTheme } from "../context/theme-context"
+import { useTheme } from "../../context/theme-context"
 
 interface ThemeCardProps {
   children: React.ReactNode

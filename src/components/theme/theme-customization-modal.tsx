@@ -4,8 +4,8 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Palette, Download, Upload, Eye, Save, Trash2, Copy, Check } from "lucide-react"
-import { useTheme } from "../context/theme-context"
-import { CustomTheme } from "../context/theme-context"
+import { useTheme } from "../../context/theme-context"
+import { CustomTheme } from "../../context/theme-context"
 
 interface ThemeCustomizationModalProps {
   isOpen: boolean

@@ -1,137 +1,14 @@
 // electron/main.ts
-import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from "electron"
+import { app, BrowserWindow, dialog, ipcMain, protocol, shell, Notification } from "electron"
 import { readdir, stat, readFile } from "fs/promises"
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs"
-import { createServer, IncomingMessage, ServerResponse } from "http"
 import path from "path"
-import { URL } from "url"
 import { exec } from "child_process"
 import { promisify } from "util"
 
 const execAsync = promisify(exec)
 
 let mainWindow: BrowserWindow | null = null
-let httpServer: any = null
-
-// Create a simple HTTP server for the renderer files
-function createRendererServer(rendererPath: string) {
-  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-    try {
-      // Handle requests for icons
-      if (req.url?.startsWith('/icons/')) {
-        const iconPath = path.join(rendererPath, req.url)
-        
-        if (existsSync(iconPath)) {
-          const iconData = readFileSync(iconPath)
-          res.writeHead(200, { 
-            'Content-Type': 'image/png',
-            'Access-Control-Allow-Origin': '*'
-          })
-          res.end(iconData)
-        } else {
-          res.writeHead(404)
-          res.end('Icon not found')
-        }
-        return
-      }
-      
-      // For hash routing, always serve index.html for any route
-      if (req.url === '/' || req.url?.includes('/#')) {
-        const indexPath = path.join(rendererPath, 'index.html')
-        const content = readFileSync(indexPath, 'utf8')
-        res.writeHead(200, { 
-          'Content-Type': 'text/html',
-          'Access-Control-Allow-Origin': '*'
-        })
-        res.end(content, 'utf-8')
-        return
-      }
-      
-      let filePath = path.join(rendererPath, req.url || '')
-      
-      // Security check - prevent directory traversal
-      if (!filePath.startsWith(rendererPath)) {
-        res.writeHead(403)
-        res.end('Forbidden')
-        return
-      }
-      
-      const extname = path.extname(filePath)
-      let contentType = 'text/html'
-      
-      switch (extname) {
-        case '.js':
-          contentType = 'text/javascript'
-          break
-        case '.css':
-          contentType = 'text/css'
-          break
-        case '.json':
-          contentType = 'application/json'
-          break
-        case '.png':
-          contentType = 'image/png'
-          break
-        case '.jpg':
-          contentType = 'image/jpg'
-          break
-        case '.gif':
-          contentType = 'image/gif'
-          break
-        case '.svg':
-          contentType = 'image/svg+xml'
-          break
-        case '.wav':
-          contentType = 'audio/wav'
-          break
-      }
-      
-      try {
-        let content: string | Buffer
-        
-        // For text files, read as UTF-8
-        if (['.js', '.css', '.json', '.html', '.svg'].includes(extname)) {
-          content = readFileSync(filePath, 'utf8')
-        } else {
-          // For binary files, read as buffer
-          content = readFileSync(filePath)
-        }
-        
-        res.writeHead(200, { 
-          'Content-Type': contentType,
-          'Access-Control-Allow-Origin': '*'
-        })
-        res.end(content)
-      } catch (error: any) {
-        if (error.code === 'ENOENT') {
-          // If file not found, serve index.html for hash routing
-          const indexPath = path.join(rendererPath, 'index.html')
-          const indexContent = readFileSync(indexPath, 'utf8')
-          res.writeHead(200, { 
-            'Content-Type': 'text/html',
-            'Access-Control-Allow-Origin': '*'
-          })
-          res.end(indexContent, 'utf-8')
-        } else {
-          res.writeHead(500)
-          res.end('Server error')
-        }
-      }
-    } catch (error) {
-      console.error('Server error:', error)
-      res.writeHead(500)
-      res.end('Server error')
-    }
-  })
-  
-  // Find an available port
-  const port = 3456
-  server.listen(port, 'localhost', () => {
-    console.log(`Renderer server running on http://localhost:${port}`)
-  })
-  
-  return { server, port }
-}
 
 // Create the main window
 function createWindow() {
@@ -176,65 +53,7 @@ function createWindow() {
   })
 
   if (app.isPackaged) {
-    // For packaged app, find the correct path to renderer directory
-    let rendererPath: string = ''
-    
-    // Try different possible paths
-    const possiblePaths = [
-      path.join(process.resourcesPath, "app", "dist", "renderer"),
-      path.join(__dirname, "..", "renderer"),
-      path.join(__dirname, "..", "..", "dist", "renderer"),
-      path.join(process.cwd(), "dist", "renderer"),
-      path.join(app.getAppPath(), "dist", "renderer")
-    ]
-    
-    for (const possiblePath of possiblePaths) {
-      if (existsSync(possiblePath)) {
-        rendererPath = possiblePath
-        break
-      }
-    }
-    
-    if (!rendererPath) {
-      console.error("Could not find renderer directory!")
-      if (mainWindow) {
-        mainWindow.webContents.loadURL(`data:text/html,<html><body><h1>Error: Could not find application files</h1><p>Please reinstall the application.</p></body></html>`)
-      }
-      return
-    }
-    
-    console.log("Found renderer directory at:", rendererPath)
-    
-    // Create HTTP server for renderer files
-    const { server, port } = createRendererServer(rendererPath)
-    httpServer = server
-    
-    // Wait a bit for the server to start, then load the app
-    setTimeout(() => {
-      if (mainWindow) {
-        console.log(`Loading app from http://localhost:${port}`)
-        mainWindow.loadURL(`http://localhost:${port}`)
-        
-        // Open DevTools in packaged app for debugging (remove in production)
-        // mainWindow.webContents.openDevTools()
-      }
-    }, 100)
-    
-    // Handle all navigation requests
-    mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-      const parsedUrl = new URL(navigationUrl)
-      
-      // Allow only localhost requests
-      if (parsedUrl.hostname !== 'localhost') {
-        event.preventDefault()
-      }
-    })
-    
-    // Handle new window requests
-    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-      // Prevent opening new windows
-      return { action: 'deny' }
-    })
+    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"))
   } else {
     mainWindow.loadURL("http://localhost:5173")
     mainWindow.webContents.openDevTools()
@@ -242,19 +61,10 @@ function createWindow() {
 
   mainWindow.on("closed", () => {
     mainWindow = null
-    if (httpServer) {
-      httpServer.close()
-      httpServer = null
-    }
   })
 }
 
 app.whenReady().then(() => {
-  console.log("App ready, isPackaged:", app.isPackaged)
-  console.log("App path:", app.getAppPath())
-  console.log("__dirname:", __dirname)
-  console.log("process.resourcesPath:", process.resourcesPath)
-  
   createWindow()
 
   app.on("activate", () => {
@@ -263,10 +73,6 @@ app.whenReady().then(() => {
 })
 
 app.on("window-all-closed", () => {
-  if (httpServer) {
-    httpServer.close()
-    httpServer = null
-  }
   if (process.platform !== "darwin") {
     app.quit()
   }
@@ -336,6 +142,13 @@ ipcMain.handle("select-folder", async () => {
   } catch (error) {
     console.error("Error in select-folder:", error)
     return null
+  }
+})
+
+// Show notification
+ipcMain.handle("show-notification", (_event, title: string, body: string) => {
+  if (Notification.isSupported()) {
+    new Notification({ title, body }).show()
   }
 })
 

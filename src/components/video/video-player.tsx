@@ -4,7 +4,7 @@
 import type React from "react"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { motion } from "framer-motion"
-import { FastForward, Maximize2, Minimize2, Pause, Play, Rewind, Volume2, VolumeX, Settings, Subtitles, Bookmark, ExternalLink, AlertCircle } from "lucide-react"
+import { FastForward, Maximize2, Minimize2, Pause, Play, Rewind, Volume2, VolumeX, Settings, Subtitles, Bookmark, ExternalLink, AlertCircle, SkipBack, SkipForward } from "lucide-react"
 
 interface VideoPlayerProps {
   videoSrc: string
@@ -135,99 +135,67 @@ export function VideoPlayer({
     }
   }, [videoPath])
 
-  // Parse VTT file
+  // A more robust VTT parser
   const parseVTT = (text: string): SubtitleCue[] => {
     const cues: SubtitleCue[] = []
     const lines = text.split('\n')
-    
-    let startIndex = 0
-    while (startIndex < lines.length && (!lines[startIndex].trim() || lines[startIndex].trim().startsWith('WEBVTT'))) {
-      startIndex++
+    let i = 0
+
+    // Skip WEBVTT header
+    while (i < lines.length && !lines[i].includes('-->')) {
+      i++
     }
-    
-    let currentCue: Partial<SubtitleCue> | null = null
-    
-    for (let i = startIndex; i < lines.length; i++) {
-      const line = lines[i].trim()
-      
-      if (!line || line.startsWith('NOTE') || line.startsWith('STYLE')) {
-        continue
-      }
-      
-      const timeMatch = line.match(/(\d{1,2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{1,2}):(\d{2}):(\d{2})[.,](\d{3})/)
+
+    while (i < lines.length) {
+      const timeLine = lines[i]
+      const timeMatch = timeLine.match(/(\d{2}:)?(\d{2}:\d{2})\.(\d{3})\s*-->\s*(\d{2}:)?(\d{2}:\d{2})\.(\d{3})/)
       if (timeMatch) {
-        if (currentCue && currentCue.text) {
-          cues.push(currentCue as SubtitleCue)
+        const parseTime = (timeStr: string) => {
+          const parts = timeStr.split(':').map(Number)
+          if (parts.length === 3) {
+            return parts[0] * 3600 + parts[1] * 60 + parts[2]
+          }
+          return parts[0] * 60 + parts[1]
         }
         
-        const startHours = parseInt(timeMatch[1], 10)
-        const startMinutes = parseInt(timeMatch[2], 10)
-        const startSeconds = parseInt(timeMatch[3], 10)
-        const startMilliseconds = parseInt(timeMatch[4], 10)
-        const start = startHours * 3600 + startMinutes * 60 + startSeconds + startMilliseconds / 1000
+        const start = parseTime(timeMatch[2]) + Number.parseFloat(`0.${timeMatch[3]}`)
+        const end = parseTime(timeMatch[5]) + Number.parseFloat(`0.${timeMatch[6]}`)
         
-        const endHours = parseInt(timeMatch[5], 10)
-        const endMinutes = parseInt(timeMatch[6], 10)
-        const endSeconds = parseInt(timeMatch[7], 10)
-        const endMilliseconds = parseInt(timeMatch[8], 10)
-        const end = endHours * 3600 + endMinutes * 60 + endSeconds + endMilliseconds / 1000
-        
-        currentCue = {
-          start,
-          end,
-          text: ""
+        let textLines = []
+        i++
+        while (i < lines.length && lines[i].trim() !== '') {
+          textLines.push(lines[i].trim())
+          i++
         }
-      } else if (currentCue && line) {
-        if (currentCue.text) {
-          currentCue.text += " " + line
-        } else {
-          currentCue.text = line
-        }
+
+        cues.push({ start, end, text: textLines.join(' ') })
       }
+      i++
     }
-    
-    if (currentCue && currentCue.text) {
-      cues.push(currentCue as SubtitleCue)
-    }
-    
     return cues
   }
 
-  // Parse SRT file
+  // A more robust SRT parser
   const parseSRT = (text: string): SubtitleCue[] => {
     const cues: SubtitleCue[] = []
-    const blocks = text.split(/\n\n+/)
-    
+    const blocks = text.replace(/\r\n/g, '\n').split('\n\n')
+
     for (const block of blocks) {
-      const lines = block.trim().split('\n')
-      if (lines.length < 3) continue
-      
-      const timeMatch = lines[1].match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/)
-      if (!timeMatch) continue
-      
-      const hours = parseInt(timeMatch[1], 10)
-      const minutes = parseInt(timeMatch[2], 10)
-      const seconds = parseInt(timeMatch[3], 10)
-      const milliseconds = parseInt(timeMatch[4], 10)
-      const start = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000
-      
-      const endHours = parseInt(timeMatch[5], 10)
-      const endMinutes = parseInt(timeMatch[6], 10)
-      const endSeconds = parseInt(timeMatch[7], 10)
-      const endMilliseconds = parseInt(timeMatch[8], 10)
-      const end = endHours * 3600 + endMinutes * 60 + endSeconds + endMilliseconds / 1000
-      
-      const subtitleText = lines.slice(2).join(' ').trim()
-      
-      if (subtitleText) {
-        cues.push({
-          start,
-          end,
-          text: subtitleText
-        })
+      const lines = block.split('\n')
+      if (lines.length > 1) {
+        const timeMatch = lines[1].match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/)
+        if (timeMatch) {
+          const parseTime = (h: string, m: string, s: string, ms: string) =>
+            Number.parseInt(h) * 3600 + Number.parseInt(m) * 60 + Number.parseInt(s) + Number.parseInt(ms) / 1000
+
+          const start = parseTime(timeMatch[1], timeMatch[2], timeMatch[3], timeMatch[4])
+          const end = parseTime(timeMatch[5], timeMatch[6], timeMatch[7], timeMatch[8])
+          const text = lines.slice(2).join(' ')
+
+          cues.push({ start, end, text })
+        }
       }
     }
-    
     return cues
   }
 
@@ -974,6 +942,7 @@ export function VideoPlayer({
               src={videoSrc}
               playsInline
               onClick={onPlayPause}
+              onEnded={onVideoEnd}
               crossOrigin="anonymous"
               preload="metadata"
             />
@@ -1217,6 +1186,16 @@ export function VideoPlayer({
                 <Rewind className="w-4 h-4 text-white" />
               </button>
 
+              {onPreviousVideo && (
+                <button
+                  onClick={onPreviousVideo}
+                  className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+                  title="Previous video (Shift+←)"
+                >
+                  <SkipBack className="w-4 h-4 text-white" />
+                </button>
+              )}
+
               <button
                 onClick={onPlayPause}
                 className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
@@ -1225,14 +1204,24 @@ export function VideoPlayer({
                 {isPlaying ? <Pause className="w-5 h-5 text-white" /> : <Play className="w-5 h-5 text-white ml-0.5" />}
               </button>
 
-              <button
-                onClick={handleFastForward}
-                className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
-                title="Forward 10 seconds (→)"
-              >
-                <FastForward className="w-4 h-4 text-white" />
-              </button>
+              {onNextVideo && (
+                <button
+                  onClick={onNextVideo}
+                  className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+                  title="Next video (Shift+→)"
+                >
+                  <SkipForward className="w-4 h-4 text-white" />
+                </button>
+              )}
             </div>
+
+            <button
+              onClick={handleFastForward}
+              className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center hover:bg-white/20 transition-colors"
+              title="Forward 10 seconds (→)"
+            >
+              <FastForward className="w-4 h-4 text-white" />
+            </button>
           </div>
         </div>
       </motion.div>

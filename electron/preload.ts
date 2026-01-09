@@ -31,6 +31,9 @@ contextBridge.exposeInMainWorld("electron", {
   // Add method to get file stats
   getFileStats: (filePath: string) => ipcRenderer.invoke("get-file-stats", filePath),
   
+  // Add method to show notification
+  showNotification: (title: string, body: string) => ipcRenderer.invoke("show-notification", title, body),
+
   // Add methods for handling progress updates
   onCourseLoadingProgress: (callback: (data: { message: string; progress: number }) => void) => {
     const channel = "course-loading-progress"
